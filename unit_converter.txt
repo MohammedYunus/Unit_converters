@@ -1,0 +1,932 @@
+// ==UserScript==
+// @name         Neptune
+// @version      1.0
+// @description  Converts units
+// @author       Mohammed yunus
+// @icon         https://cdn-icons-png.flaticon.com/512/3521/3521388.png
+// @require      https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js
+// @require      https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js
+// @match        https://*/*
+// @grant        GM_xmlhttpRequest
+// ==/UserScript==
+/* global angular*/
+
+(function() {
+    'use strict';
+
+    //1. creating converter modal HTML.
+    let converterModalHtml = `
+    <div class="modal fade" id="convModal" role="dialog" style="top:10%;left:10%;bottom:0%;">
+        <div class="modal-dialog modal-sm" style="width: 90%">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modalV3">
+                &times;
+              </button>
+              <h3 class="modal-title text-center">Converter</h3>
+            </div>
+            <div class="modal-body">
+              <select class="form-select" style="width: 150px; height: 25px">
+                <option selected value="selec">Select dimension</option>
+                <option value="mass">Mass</option>
+                <option value="volume">Volume</option>
+                <option value="length">Length</option>
+                <option value="area">Area</option>
+                <option value="FPN">FPN-Calculation</option>
+              </select>
+
+              <div
+                id="unit-values-container"
+                style="display: flex; flex-wrap: wrap"
+                class="hidden"
+              >
+                <!-- feet container-->
+                <p style="margin-top: 20px; margin-left: 1em">
+                  <label class="ft">Feet</label>
+                  <input
+                    min="0"
+                    type="number"
+                    style="width: 150px"
+                    class="form-control"
+                    id="inputFeet"
+                    placeholder="Feet"
+                  />
+                </p>
+                <p style="margin-top: 20px; margin-left: 1em">
+                  <label class="mt">Meter</label>
+                  <input
+                    min="0"
+                    type="number"
+                    style="width: 150px"
+                    class="form-control"
+                    id="inputMeter"
+                    placeholder="Meter"
+                  />
+                </p>
+                <p style="margin-top: 20px; margin-left: 1em">
+                  <label class="inch">Inches</label>
+                  <input
+                    min="0"
+                    type="number"
+                    style="width: 150px"
+                    class="form-control"
+                    id="inputInches"
+                    placeholder="Inches"
+                  />
+                </p>
+                <p style="margin-top: 20px; margin-left: 1em">
+                  <label class="cm">Centimeter</label>
+                  <input
+                    min="0"
+                    type="number"
+                    style="width: 150px"
+                    class="form-control"
+                    id="inputCentimeter"
+                    placeholder="Centimeter"
+                  />
+                </p>
+
+
+
+
+                <p style="margin-top: 20px; margin-left: 1em">
+                  <label class="yd">Yard</label>
+                  <input
+                    min="0"
+                    type="number"
+                    style="width: 150px"
+                    class="form-control"
+                    id="inputYard"
+                    placeholder="Yard"
+                  />
+
+                  <select class="form-select-weight1" style="width: 140px; height: 25px">
+                   <option selected value="pds">Pounds (Lb)</option>
+                   <option value="kgs">Kilogram (Kg)</option>
+                   <option value="grs">Gram (gr)</option>
+                   <option value="ozs">Ounces (Oz)</option>
+                   <option value="lts">Liter (Lt)</option>
+                   <option value="mls">Milliliter (ml)</option>
+                   <option value="flzo">Fluid ounce (Fl.O)</option>
+                  </select>
+
+                </p>
+
+              <p style="margin-top: 20px; margin-left: 1em">
+                  <label class="mm">Millimeter</label>
+                  <input
+                    min="0"
+                    type="number"
+                    style="width: 150px"
+                    class="form-control"
+                    id="inputMillimeter"
+                    placeholder="Millimeter"
+                  />
+                  <select class="form-select-weight2" style="width: 140px; height: 25px">
+                    <option selected value="pds">Pounds (Lb)</option>
+                    <option value="kgs">Kilogram (Kg)</option>
+                    <option value="grs">Gram (gr)</option>
+                    <option value="ozs">Ounces (Oz)</option>
+                    <option value="lts">Liter (Lt)</option>
+                    <option value="mls">Milliliter (ml)</option>
+                    <option value="flzo">Fluid ounce (Fl.O)</option>
+                  </select>
+              </p>
+
+                <p class="mile" style="margin-top: 20px; margin-left: 1em">
+                  <label class="mi">Miles</label>
+                  <input
+                    min="0"
+                    type="number"
+                    style="width: 150px"
+                    class="form-control"
+                    id="inputMiles"
+                    placeholder="Miles"
+                  />
+                </p>
+                <p class="kiloMt" style="margin-top: 20px; margin-left: 1em">
+                  <label class="km">Kilometer</label>
+                  <input
+                    min="0"
+                    type="number"
+                    style="width: 150px"
+                    class="form-control"
+                    id="inputKilometer"
+                    placeholder="Kilometer"
+                  />
+                </p>
+                <button id="calc" type="button" class="btn btn-success">
+                Calculate
+              </button>
+              </div>
+            </div>
+            <!-- end of length-->
+
+            <div class="modal-footer" style="padding:5px;">
+              <button id="clear" type="button" class="btn btn-default">
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+`;
+    //2. inserting HTML modal into tool.
+
+    let afterModal = document.querySelector('body');
+    afterModal.insertAdjacentHTML("beforeend", converterModalHtml);
+
+    //3. Selecting DOM elements.
+
+    let dropDown = document.querySelector(".form-select");
+    let unitOptions = document.querySelector("#unit-values-container");
+
+    let feetClass = document.querySelector(".ft");
+    let feetId = document.getElementById("inputFeet");
+    let meterClass = document.querySelector(".mt");
+    let meterId = document.getElementById("inputMeter");
+    let inchClass = document.querySelector(".inch");
+    let inchId = document.getElementById("inputInches");
+    let cmClass = document.querySelector(".cm");
+    let cmId = document.getElementById("inputCentimeter");
+    let ydClass = document.querySelector(".yd");
+    let ydId = document.getElementById("inputYard");
+    let mmClass = document.querySelector(".mm");
+    let mmId = document.getElementById("inputMillimeter");
+    let mileClass = document.querySelector(".mi");
+    let mileId = document.getElementById("inputMiles");
+    let kmClass = document.querySelector(".km");
+    let kmId = document.getElementById("inputKilometer");
+    let calcBtn = document.getElementById("calc");
+    let dd1 = document.querySelector(".form-select-weight1");
+    let dd2 = document.querySelector(".form-select-weight2");
+    let tempft, tempcm, tempinc, tempmil;
+
+    // fpn reset
+    let fpnReset = function(){
+        tempft = 1;
+        tempinc = 1;
+        tempcm = 1;
+        tempmil = 1;
+    }
+
+    //4. clearing fields
+    let clearFields = function(){
+        feetId.value = " ";
+        meterId.value = " ";
+        inchId.value = " ";
+        cmId.value = " ";
+        ydId.value = " ";
+        mmId.value = " ";
+        mileId.value = " ";
+        kmId.value = " ";
+        fpnReset();
+        for(var k, l = 0; k = dd2.options[l]; l++) {
+            if(k.value ==="pds") {
+                dd2.selectedIndex = l;
+                break;
+            }
+        }
+        for(var i, j = 0; i = dd1.options[j]; j++) {
+            if(i.value ==="pds") {
+                dd1.selectedIndex = j;
+                break;
+            }
+        }
+    };
+
+    let clearBtn = document.getElementById("clear");
+    clearBtn.addEventListener("click",clearFields);
+
+
+    if (dropDown.value === "length") {
+        unitOptions.classList.remove("hidden");
+    }
+
+    //5. evaluating placeholders, dropdown & label values.
+
+    let currentValue = dropDown.addEventListener("change", () => {
+
+        //checking dropdown value.
+        let unitDimension = dropDown.value;
+        console.log(unitDimension);
+        if(unitDimension === "length"){
+            clearFields();
+
+            //changing placeholder and label for LENGTH.
+            feetClass.textContent = "Feet";
+            feetId.placeholder = "Feet (ft.)";
+
+            meterClass.textContent = "Meter";
+            meterId.placeholder = "Meter (m)";
+            meterId.disabled = false;
+
+            inchClass.textContent = "Inches";
+            inchId.placeholder = "Inch (in)";
+
+            cmClass.textContent = "Centimeter";
+            cmId.placeholder = "Centimeter (cm)";
+
+            ydClass.textContent = "Yard";
+            ydId.placeholder = "Yard (yd)";
+            ydId.style.display = 'block';
+
+            mmClass.textContent = "Millimeter";
+            mmId.placeholder = "Millimeter (mm)";
+            mmId.style.display = 'block';
+
+            mileClass.textContent = "Mile";
+            mileId.placeholder = "Mile (Mi)";
+            mileId.disabled = false;
+
+            kmClass.textContent = "Kilometer";
+            kmId.placeholder = "Kilometer (km)";
+
+            calcBtn.style.display = "none";
+
+
+            feetId.addEventListener("input",()=>{
+                meterId.value = (feetId.value * 0.3048).toFixed(4);
+                inchId.value = feetId.value * 12;
+                cmId.value = (feetId.value * 30.48).toFixed(2);
+                ydId.value = (feetId.value * 0.333333).toFixed(4);
+                mmId.value = (feetId.value * 304.8).toFixed(2);
+                mileId.value = (feetId.value * 0.000189394).toFixed(9);
+                kmId.value = (feetId.value * 0.0003048).toFixed(7);
+                //console.log(feetId.value);
+            });
+
+            meterId.addEventListener("input",()=>{
+                feetId.value = (meterId.value / 0.3048).toFixed(4);
+                inchId.value = (meterId.value * 39.3701).toFixed(3);
+                cmId.value = meterId.value * 100;
+                ydId.value = (meterId.value * 1.09361).toFixed(3);
+                mmId.value = meterId.value * 1000;
+                mileId.value = (meterId.value * 0.000621371).toFixed(8);
+                kmId.value = (meterId.value * 0.001).toFixed(3);
+                //console.log(meterId.value);
+            });
+
+            inchId.addEventListener("input",()=>{
+                feetId.value = (inchId.value / 12).toFixed(4);
+                meterId.value = (inchId.value * 0.0254).toFixed(4);
+                cmId.value = inchId.value * 2.54;
+                ydId.value = (inchId.value * 0.0277778).toFixed(4);
+                mmId.value = (inchId.value * 25.4).toFixed(1);
+                mileId.value = (inchId.value / 63360).toExponential(4);
+                kmId.value = (inchId.value / 39370.1).toExponential(2);
+                //console.log(inchId.value);
+            });
+
+            cmId.addEventListener("input",()=>{
+                feetId.value = (cmId.value / 30.48).toFixed(4);
+                meterId.value = cmId.value /100;
+                inchId.value = (cmId.value / 2.54).toFixed(4);
+                ydId.value = (cmId.value / 91.44).toFixed(4);
+                mmId.value = cmId.value * 10;
+                mileId.value = (cmId.value / 160934).toExponential(4);
+                kmId.value = (cmId.value / 100000).toExponential();
+                //console.log(cmId.value);
+            });
+
+            ydId.addEventListener("input",()=>{
+                feetId.value = ydId.value * 3;
+                meterId.value = (ydId.value * 0.9144).toFixed(4);
+                inchId.value = ydId.value * 36;
+                cmId.value = (ydId.value * 91.44).toFixed(2);
+                mmId.value = (ydId.value * 914.4).toFixed(2);
+                mileId.value = (ydId.value / 1760).toFixed(8);
+                kmId.value = ydId.value * 0.0009144;
+                //console.log(ydId.value);
+            });
+
+            mmId.addEventListener("input",()=>{
+                feetId.value = (mmId.value / 304.8).toFixed(5);
+                meterId.value = mmId.value /1000;
+                inchId.value = (mmId.value / 25.4).toFixed(5);
+                cmId.value = (mmId.value * 0.1).toFixed(1);
+                ydId.value = (mmId.value / 914.4).toFixed(8);
+                mileId.value = (mmId.value / 1609344).toExponential(4);
+                kmId.value = (mmId.value / 1000000).toExponential();
+                //console.log(mmId.value);
+            });
+
+            mileId.addEventListener("input",()=>{
+                feetId.value = mileId.value * 5280;
+                meterId.value = (mileId.value * 1609.34).toFixed(2);
+                inchId.value = mileId.value * 63360;
+                cmId.value = mileId.value * 160934;
+                ydId.value = mileId.value * 1760;
+                mmId.value = (mileId.value * 1609344).toExponential(3);
+                kmId.value = (mileId.value * 1.60934);
+                //console.log(mileId.value);
+            });
+
+            kmId.addEventListener("input",()=>{
+                feetId.value = (kmId.value * 3280.84).toFixed(2);
+                meterId.value = kmId.value * 1000;
+                inchId.value = (kmId.value * 39370.1).toFixed(2);
+                cmId.value = kmId.value * 100000;
+                ydId.value = (kmId.value * 1093.61).toFixed(2);
+                mmId.value = (kmId.value * 1000000).toExponential();
+                mileId.value = (kmId.value * 0.621371).toFixed(2);
+                //console.log(kmId.value);
+            });
+
+
+            document.querySelector('.mile').classList.remove("hidden");
+            document.querySelector('.kiloMt').classList.remove("hidden");
+            document.querySelector('.form-select-weight1').classList.add("hidden");
+            document.querySelector('.form-select-weight2').classList.add("hidden");
+
+            unitOptions.classList.remove("hidden");
+        }
+
+        //changing placeholder and label for MASS.
+        else if (unitDimension === "mass") {
+            clearFields();
+            let kgLabel = feetClass;
+            let kgInput = feetId;
+            kgLabel.textContent = "Kilogram";
+            kgInput.placeholder = "kilogram (kg)";
+
+            let grLabel = meterClass;
+            let grInput = meterId;
+            grLabel.textContent = "Gram";
+            grInput.placeholder = "gram (g)";
+            grInput.disabled = false;
+
+            let lbLabel = inchClass;
+            let lbInput = inchId;
+            lbLabel.textContent = "Pounds";
+            lbInput.placeholder = "Pounds (lb)";
+
+            let ozLabel = cmClass;
+            let ozInput = cmId;
+            ozLabel.textContent = "Ounces";
+            ozInput.placeholder = "Ounces (Oz)";
+
+            let mgLabel = ydClass;
+            let mgInput = ydId;
+            mgLabel.textContent = "Milligram";
+            mgInput.placeholder = "Milligram (mg)";
+            mgInput.style.display = 'block';
+
+            let tonLabel = mmClass;
+            let tonInput = mmId;
+            tonLabel.textContent = "Metric Ton";
+            tonInput.placeholder = "Ton";
+            tonInput.style.display = 'block';
+
+            calcBtn.style.display = "none";
+
+            //Calculating and converting values for mass
+
+            kgInput.addEventListener("input", () => {
+                let kgValue = kgInput.value;
+                grInput.value = kgValue * 1000;
+                lbInput.value = (kgValue * 2.2046).toFixed(3);
+                ozInput.value = (kgValue * 35.274).toFixed(3);
+                mgInput.value = kgValue * 1000000;
+                tonInput.value = kgValue/1000;
+                //console.log(kgValue);
+            });
+
+            grInput.addEventListener("input", () => {
+                let grValue = grInput.value;
+                kgInput.value = grValue / 1000;
+                lbInput.value = (grValue * 0.0022046).toFixed(6);
+                ozInput.value = (grValue * 0.035274).toFixed(6);
+                mgInput.value = grValue * 1000;
+                tonInput.value = grValue/1000000;
+                //console.log(grValue);
+            });
+
+            lbInput.addEventListener("input", () => {
+                let lbValue = lbInput.value;
+                kgInput.value = (lbValue / 2.2046).toFixed(3);
+                grInput.value = (lbValue * 453.592).toFixed(2);
+                ozInput.value = lbValue / 0.0625;
+                mgInput.value = ((lbValue *1000) / 0.00220462).toFixed(3);
+                tonInput.value = (lbValue/2204.62).toFixed(7);
+                //console.log(lbValue);
+            });
+
+            ozInput.addEventListener("input", () => {
+                let ozValue = ozInput.value;
+                kgInput.value = (ozValue / 35.274).toFixed(4);
+                grInput.value = (ozValue / 0.035274).toFixed(3);
+                lbInput.value = ozValue / 16;
+                mgInput.value = ((ozValue *1000) / 0.035274).toFixed(3);
+                tonInput.value = (ozValue/35274).toFixed(8);
+                //console.log(ozValue);
+            });
+
+            mgInput.addEventListener("input", () => {
+                let mgValue = mgInput.value;
+                kgInput.value = mgValue/1000000;
+                grInput.value = mgValue/1000;
+                lbInput.value = ((mgValue * 0.0022046)/1000).toExponential(4);
+                ozInput.value = ((mgValue* 0.035274)/1000).toFixed(9);
+                tonInput.value = mgValue/1000000000;
+                //console.log(mgValue);
+            });
+
+            tonInput.addEventListener("input", () => {
+                let tonValue = tonInput.value;
+                kgInput.value = tonValue*1000;
+                grInput.value = (tonValue*1000000).toExponential();
+                mgInput.value = (tonValue*1000000000).toExponential();
+                lbInput.value = (tonValue * 2204.62).toFixed(2);
+                ozInput.value = tonValue * 35274;
+                //console.log(tonValue);
+            });
+
+            // hiding rest input values.
+
+            document.querySelector('.mile').classList.add("hidden");
+            document.querySelector('.kiloMt').classList.add("hidden");
+            document.querySelector('.form-select-weight1').classList.add("hidden");
+            document.querySelector('.form-select-weight2').classList.add("hidden");
+
+            // removing hidden html inputs and placeholders
+
+            unitOptions.classList.remove("hidden");
+        }
+
+        else if(unitDimension === "area"){
+            clearFields();//clear all input fields.
+
+            //changing placeholder and label for AREA.
+            feetClass.textContent = "Square Kilometer";
+            feetId.placeholder = "sq.Km.";
+
+            meterClass.textContent = "Square meter";
+            meterId.placeholder = "sq.m.";
+            meterId.disabled = false;
+
+            inchClass.textContent = "Square mile";
+            inchId.placeholder = "sq.mi.";
+
+            cmClass.textContent = "Square yard";
+            cmId.placeholder = "sq.yd.";
+            cmId.style.display = 'block';
+
+            ydClass.textContent = "Square foot";
+            ydId.placeholder = "sq.ft.";
+            ydId.style.display = 'block';
+
+            mmClass.textContent = "Square inch";
+            mmId.placeholder = "sq.in.";
+            mmId.style.display = 'block';
+
+            mileClass.textContent = "Hectare";
+            mileId.placeholder = "Hectare";
+            mileId.disabled = false;
+
+            kmClass.textContent = "Acre";
+            kmId.placeholder = "Acre";
+
+            calcBtn.style.display = "none";
+
+            feetId.addEventListener("input",()=>{
+                meterId.value = (feetId.value * 1000000).toExponential();
+                inchId.value = (feetId.value * 0.386102).toFixed(4);
+                cmId.value = (feetId.value * 1195990.046301).toExponential(3);
+                ydId.value = (feetId.value * 10763910.41671).toExponential(3);
+                mmId.value = (feetId.value * 1550003100.0062).toExponential(2);
+                mileId.value = feetId.value * 100;
+                kmId.value = (feetId.value * 247.105).toFixed(2);
+                //console.log(feetId.value);
+            });
+
+            meterId.addEventListener("input",()=>{
+                feetId.value = (meterId.value / 1000000).toExponential();
+                inchId.value = (meterId.value * 0.00000038610215855).toExponential(3);
+                cmId.value = (meterId.value * 1.19599).toFixed(4);
+                ydId.value = (meterId.value * 10.7639).toFixed(3);
+                mmId.value = meterId.value *1550;
+                mileId.value = (meterId.value * 0.0001).toFixed(4);
+                kmId.value = (meterId.value / 4046.86).toFixed(7);
+                //console.log(meterId.value);
+            });
+
+            inchId.addEventListener("input",()=>{
+                feetId.value = (inchId.value * 2.58999).toFixed(5);
+                meterId.value = (inchId.value * 2589988.11).toExponential(2);
+                cmId.value = (inchId.value * 3097599.999598).toExponential(3);
+                ydId.value = (inchId.value * 27878399.996383).toExponential(3);
+                mmId.value = (inchId.value * 4014489599.4792).toExponential(3);
+                mileId.value = (inchId.value * 258.999).toFixed(3);
+                kmId.value = inchId.value * 640;
+                //console.log(inchId.value);
+            });
+
+            cmId.addEventListener("input",()=>{
+                feetId.value = (cmId.value / 1195990.046301).toExponential(4);
+                meterId.value = (cmId.value * 0.836127).toFixed(6);
+                inchId.value = (cmId.value*0.00000032283).toExponential(4);
+                ydId.value = cmId.value * 9;
+                mmId.value = cmId.value * 1296;
+                mileId.value = (cmId.value / 11960).toExponential(4);
+                kmId.value = (cmId.value / 4840).toFixed(9);
+                //console.log(cmId.value);
+            });
+
+            ydId.addEventListener("input",()=>{
+                feetId.value = (ydId.value / 10763910.41671).toExponential(4);
+                meterId.value = (ydId.value / 10.7639).toFixed(6);
+                inchId.value = (ydId.value / 27878399.996383).toExponential(3);
+                cmId.value = (ydId.value / 9).toFixed(6);
+                mmId.value = ydId.value * 144;
+                mileId.value = (ydId.value/107639).toExponential(4);
+                kmId.value = (ydId.value/43560).toExponential(4);
+                //console.log(ydId.value);
+            });
+
+            mmId.addEventListener("input",()=>{
+                feetId.value = (mmId.value / 1550003100.0062).toExponential(4);
+                meterId.value = (mmId.value / 1550).toFixed(8);
+                inchId.value = (mmId.value / 4014489599.4792).toExponential(3);
+                cmId.value = (mmId.value / 1296).toFixed(8);
+                ydId.value = (mmId.value / 144).toFixed(8);
+                mileId.value = (mmId.value * 0.000000064516).toExponential(4);
+                kmId.value = (mmId.value / 6272640).toExponential(4);
+                //console.log(mmId.value);
+            });
+
+            mileId.addEventListener("input",()=>{
+                feetId.value = mileId.value / 100;
+                meterId.value = mileId.value * 10000;
+                inchId.value = (mileId.value / 259).toFixed(8);
+                cmId.value = (mileId.value * 11959.9).toFixed(2);
+                ydId.value = mileId.value * 107639;
+                mmId.value = (mileId.value / 0.000000064516).toExponential(2);
+                kmId.value = (mileId.value * 2.47105).toFixed(3);
+                //console.log(mileId.value);
+            });
+
+            kmId.addEventListener("input",()=>{
+                feetId.value = (kmId.value / 247.105).toFixed(8);
+                meterId.value = (kmId.value * 4046.86).toFixed(2);
+                inchId.value = kmId.value / 640;
+                cmId.value = kmId.value * 4840;
+                ydId.value = kmId.value * 43560;
+                mmId.value = (kmId.value * 6272640).toExponential(3);
+                mileId.value = (kmId.value / 2.47105).toFixed(6);
+                //console.log(kmId.value);
+            });
+
+            //removing hidden classList elements
+            document.querySelector('.mile').classList.remove("hidden");
+            document.querySelector('.kiloMt').classList.remove("hidden");
+            document.querySelector('.form-select-weight1').classList.add("hidden");
+            document.querySelector('.form-select-weight2').classList.add("hidden");
+            unitOptions.classList.remove("hidden");
+        }
+
+        else if(unitDimension === "volume"){
+            clearFields();//clear all input fields.
+
+            //changing placeholder and label for AREA.
+            feetClass.textContent = "Liter";
+            feetId.placeholder = "liter (L).";
+
+            meterClass.textContent = "MilliLiter";
+            meterId.placeholder = "milliliter (ml)";
+            meterId.disabled = false;
+
+            inchClass.textContent = "Centiliter";
+            inchId.placeholder = "centiliter (cl)";
+
+            cmClass.textContent = "Fluid ounce";
+            cmId.placeholder = "fluid ounce (fl.oz.)";
+
+            ydClass.textContent = "Gallon";
+            ydId.placeholder = "gallon (gal)";
+            ydId.style.display = 'block';
+
+            mmClass.textContent = "Quart";
+            mmId.placeholder = "quart (qt)";
+            mmId.style.display = 'block';
+
+            mileClass.textContent = "Pint";
+            mileId.placeholder = "pint (pt)";
+            mileId.disabled = false;
+
+            kmClass.textContent = "Deciliter";
+            kmId.placeholder = "deciliter (dl)";
+
+            calcBtn.style.display = "none";
+
+            feetId.addEventListener("input",()=>{
+                meterId.value = (feetId.value * 1000);
+                inchId.value = (feetId.value *100);
+                cmId.value = (feetId.value * 33.814).toFixed(3);
+                ydId.value = (feetId.value * 0.264172).toFixed(3);
+                mmId.value = (feetId.value * 1.05669).toFixed(3);
+                mileId.value = (feetId.value * 2.11338).toFixed(3);
+                kmId.value = (feetId.value * 10);
+                //console.log(feetId.value);
+            });
+
+            meterId.addEventListener("input",()=>{
+                feetId.value = (meterId.value / 1000);
+                inchId.value = (meterId.value / 10);
+                cmId.value = (meterId.value / 29.5735).toFixed(6);
+                ydId.value = (meterId.value / 3785.41).toFixed(9);
+                mmId.value = (meterId.value / 946.353).toFixed(8);
+                mileId.value = (meterId.value / 473.176).toFixed(8);
+                kmId.value = (meterId.value / 100);
+                //console.log(meterId.value);
+            });
+
+            inchId.addEventListener("input",()=>{
+                feetId.value = inchId.value / 100;
+                meterId.value = inchId.value * 10;
+                cmId.value = (inchId.value * 0.33814).toFixed(5);
+                ydId.value = (inchId.value / 378.541).toFixed(8);
+                mmId.value = (inchId.value / 94.6353).toFixed(7);
+                mileId.value = (inchId.value / 47.3176).toFixed(7);
+                kmId.value = inchId.value / 10;
+                //console.log(inchId.value);
+            });
+
+            cmId.addEventListener("input",()=>{
+                feetId.value = (cmId.value / 33.814).toFixed(7);
+                meterId.value = (cmId.value * 29.5735).toFixed(4);
+                inchId.value = (cmId.value / 0.33814).toFixed(5);
+                ydId.value = (cmId.value / 128).toFixed(7);
+                mmId.value = (cmId.value / 32).toFixed(5);
+                mileId.value = (cmId.value/16).toFixed(4);
+                kmId.value = (cmId.value / 3.3814).toFixed(6);
+                //console.log(cmId.value);
+            });
+
+            ydId.addEventListener("input",()=>{
+                feetId.value = (ydId.value / 0.264172).toFixed(5);
+                meterId.value = ydId.value * 3785.41;
+                inchId.value = ydId.value * 378.541;
+                cmId.value = ydId.value * 128;
+                mmId.value = ydId.value * 4;
+                mileId.value = ydId.value * 8;
+                kmId.value = ydId.value * 37.8541;
+                //console.log(ydId.value);
+            });
+
+            mmId.addEventListener("input",()=>{
+                feetId.value = (mmId.value / 1.05669).toFixed(5);
+                meterId.value = (mmId.value * 946.353).toFixed(3);
+                inchId.value = (mmId.value * 94.6353).toFixed(4);
+                cmId.value = mmId.value * 32;
+                ydId.value = mmId.value * 0.25;
+                mileId.value = mmId.value * 2;
+                kmId.value = (mmId.value * 9.46353).toFixed(3);
+                //console.log(mmId.value);
+            });
+
+            mileId.addEventListener("input",()=>{
+                feetId.value = (mileId.value / 2.11338).toFixed(6);
+                meterId.value = (mileId.value * 473.176).toFixed(3);
+                inchId.value = (mileId.value * 47.3176).toFixed(3);
+                cmId.value = mileId.value * 16;
+                ydId.value = mileId.value * 0.125;
+                mmId.value = mileId.value * 0.5;
+                kmId.value = (mileId.value * 4.73176).toFixed(3);
+                //console.log(mileId.value);
+            });
+
+            kmId.addEventListener("input",()=>{
+                feetId.value = kmId.value / 10;
+                meterId.value = kmId.value * 100;
+                inchId.value = kmId.value * 10;
+                cmId.value = (kmId.value * 3.3814).toFixed(3);
+                ydId.value = (kmId.value / 37.8541).toFixed(5);
+                mmId.value = (kmId.value / 9.46353).toFixed(5);
+                mileId.value = (kmId.value / 4.73176).toFixed(5);
+                //console.log(kmId.value);
+            });
+
+
+            //removing hidden classList elements
+            document.querySelector('.mile').classList.remove("hidden");
+            document.querySelector('.kiloMt').classList.remove("hidden");
+            document.querySelector('.form-select-weight1').classList.add("hidden");
+            document.querySelector('.form-select-weight2').classList.add("hidden");
+            unitOptions.classList.remove("hidden");
+        }
+
+        else if (unitDimension === "FPN") {
+            clearFields();
+            fpnReset();
+
+            feetClass.textContent = "Amazon_unit_count";
+            feetId.placeholder = "0";
+
+            meterClass.textContent = "unit_count_type";
+            meterId.placeholder = "Count";
+            meterId.disabled = true;
+
+            inchClass.textContent = "Amazon_item_weight";
+            inchId.placeholder = "0";
+
+            cmClass.textContent = "Comp_item_weight";
+            cmId.placeholder = "0";
+
+            ydClass.textContent = "Amazon_item_measure";
+            ydId.style.display = 'none';
+
+            mmClass.textContent = "Comp_item_measure";
+            mmId.style.display = 'none';
+
+            mileClass.textContent = "Comp IPQ";
+            mileId.placeholder = "0";
+            mileId.disabled = true;
+
+            const styling = {
+                display:"block",
+                marginLeft:"35px",
+                marginTop:"42px",
+                height:"35px",
+                width:"25%",
+            };
+
+            Object.assign(calcBtn.style, styling);
+
+            //Calculating and converting values 
+            document.querySelector('.form-select-weight2').style.marginLeft = "19px";
+
+            if(dd1.value==='pds'){
+                for(let i=4;i<=6;i++){
+                    document.querySelector(".form-select-weight2").options[i].disabled = true;
+                }
+            }
+            let properUnits = ()=>{
+                let currentOption = dd1.value;
+                if(currentOption==="kgs"||currentOption==="grs"||currentOption==="ozs"||currentOption==="pds"){
+                    let defSelect = dd2;
+                    for(var i, j = 0; i = defSelect.options[j]; j++) {
+                        if(i.value ==="pds") {
+                            defSelect.selectedIndex = j;
+                            break;
+                        }
+                    }
+                    for(let i=0;i<=3;i++){
+                        document.querySelector(".form-select-weight2").options[i].disabled = false;
+                    }
+                    for(let i=4;i<=6;i++){
+                        document.querySelector(".form-select-weight2").options[i].disabled = true;
+                    }
+
+                }else if(currentOption==="lts"||currentOption==="mls"||currentOption==="flzo"){
+                    let defSelect = dd2;
+                    for(var k, l = 0; k = defSelect.options[l]; l++) {
+                        if(k.value ==="lts") {
+                            defSelect.selectedIndex = l;
+                            break;
+                        }
+                    }
+                    for(let i=0;i<=3;i++){
+                        document.querySelector(".form-select-weight2").options[i].disabled = true;
+                    }
+                    for(let i=4;i<=6;i++){
+                        document.querySelector(".form-select-weight2").options[i].disabled = false;
+                    }
+                }
+            }
+            dd1.addEventListener('change', properUnits);
+
+            // hiding rest input values.
+            document.querySelector('.kiloMt').classList.add("hidden");
+
+            feetId.addEventListener("input",()=>{
+                meterId.value = "Count";
+                inchId.value = tempinc;
+                cmId.value = tempcm;
+                mileId.value = tempmil;
+                tempft = feetId.value;
+            });
+
+            inchId.addEventListener("input",()=>{
+                feetId.value = tempft;
+                meterId.value = "Count";
+                cmId.value = tempcm;
+                mileId.value = tempmil;
+                tempinc = inchId.value
+                //console.log(inchId.value);
+            });
+
+            cmId.addEventListener("input",()=>{
+                feetId.value = tempft;
+                meterId.value = "Count";
+                inchId.value = tempinc;
+                mileId.value = tempmil;
+                tempcm = cmId.value
+                //console.log(inchId.value);
+            });
+            let dd1Val = ["kgs","grs","ozs","pds","lts","mls","flzo"];
+            let dd2Val = ["kgs","grs","ozs","pds","lts","mls","flzo"];
+
+            calcBtn.addEventListener("click",()=>{
+                dd1Val.forEach((cur)=>{
+                    if(cur===dd2Val[dd2Val.indexOf(cur)]){
+                        mileId.value = ((feetId.value*cmId.value)/inchId.value).toFixed(3);
+                    }
+                });
+
+                if(dd1.value==="kgs"&&dd2.value==="grs"){//kg->g
+                    mileId.value = ((feetId.value*(cmId.value/1000))/inchId.value).toFixed(3);
+                }else if(dd2.value==="kgs"&&dd1.value==="grs"){//g->kg
+                    mileId.value = ((feetId.value*(cmId.value*1000))/inchId.value).toFixed(3);
+                }else if(dd1.value==="kgs"&&dd2.value==="ozs"){//kg->oz
+                    mileId.value = ((feetId.value*(cmId.value/35.274))/inchId.value).toFixed(3);
+                }else if(dd2.value==="kgs"&&dd1.value==="ozs"){//oz->kg
+                    mileId.value = ((feetId.value*(cmId.value*35.274))/inchId.value).toFixed(3);
+                }else if(dd1.value==="kgs"&&dd2.value==="pds"){//kg->pds
+                    mileId.value = ((feetId.value*(cmId.value/2.205))/inchId.value).toFixed(3);
+                }else if(dd2.value==="kgs"&&dd1.value==="pds"){//pds->kg
+                    mileId.value = ((feetId.value*(cmId.value*2.205))/inchId.value).toFixed(3);
+                }else if(dd1.value==="grs"&&dd2.value==="ozs"){//g->oz
+                    mileId.value = ((feetId.value*(cmId.value/0.035274))/inchId.value).toFixed(3);
+                }else if(dd2.value==="grs"&&dd1.value==="ozs"){//oz->g
+                    mileId.value = ((feetId.value*(cmId.value*0.035274))/inchId.value).toFixed(3);
+                }else if(dd1.value==="grs"&&dd2.value==="pds"){//g->pds
+                    mileId.value = ((feetId.value*(cmId.value*453.592))/inchId.value).toFixed(3);
+                }else if(dd2.value==="grs"&&dd1.value==="pds"){//pds->g
+                    mileId.value = ((feetId.value*(cmId.value/453.592))/inchId.value).toFixed(3);
+                }else if(dd1.value==="ozs"&&dd2.value==="pds"){//ozs->pds
+                    mileId.value = ((feetId.value*(cmId.value*16))/inchId.value).toFixed(3);
+                }else if(dd2.value==="ozs"&&dd1.value==="pds"){//pds->ozs
+                    mileId.value = ((feetId.value*(cmId.value/16))/inchId.value).toFixed(3);
+                }else if(dd1.value==="lts"&&dd2.value==="mls"){//lt->ml
+                    mileId.value = ((feetId.value*(cmId.value/1000))/inchId.value).toFixed(3);
+                }else if(dd2.value==="lts"&&dd1.value==="mls"){//ml->lt
+                    mileId.value = ((feetId.value*(cmId.value*1000))/inchId.value).toFixed(3);
+                }else if(dd1.value==="lts"&&dd2.value==="flzo"){//lt->floz
+                    mileId.value = ((feetId.value*(cmId.value/33.814))/inchId.value).toFixed(3);
+                }else if(dd2.value==="lts"&&dd1.value==="flzo"){//flzo->lt
+                    mileId.value = ((feetId.value*(cmId.value*33.814))/inchId.value).toFixed(3);
+                }else if(dd1.value==="mls"&&dd2.value==="flzo"){//ml->floz
+                    mileId.value = ((feetId.value*(cmId.value*29.5735))/inchId.value).toFixed(3);
+                }else if(dd2.value==="mls"&&dd1.value==="flzo"){//flzo->ml
+                    mileId.value = ((feetId.value*(cmId.value/29.5735))/inchId.value).toFixed(3);
+                }
+
+            });
+
+
+            // removing hidden html inputs and placeholders
+            document.querySelector('.mile').classList.remove("hidden");
+            document.querySelector('.form-select-weight1').classList.remove("hidden");
+            document.querySelector('.form-select-weight2').classList.remove("hidden");
+
+            unitOptions.classList.remove("hidden");
+        }
+
+        else {
+            unitOptions.classList.add("hidden");
+        }
+    });
+
+
+})();
